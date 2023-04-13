@@ -9,10 +9,11 @@ import numpy
 
 def load_data(NAME):
     # Load data
-    df = pd.read_csv('../processed/'+str(NAME)+'.csv')
+    df = pd.read_csv('processed/'+str(NAME)+'.csv')
     # Remove empty spaces in column names.
     df.columns = [col.replace(" ", "") for col in df.columns]
     # Print few values of data.
+    print(NAME)
     print(f"Max number of frames {df.frame.max()}", f"\nTotal shape of dataframe {df.shape}")
     return df
 
@@ -25,10 +26,10 @@ def calibration_data(vid_names):
     '''
     d_cal = {}
     for name in vid_names:
-        d_cal[name] = pd.read_csv('../processed/'+str(name)+'.csv')
+        d_cal[name] = pd.read_csv('processed/'+str(name)+'.csv')
     return d_cal
         
-def plot_calibration_data(d_cal, eye_pos=0, tag):
+def plot_calibration_data(d_cal, tag, eye_pos=0):
     '''
     @Param <d_cal>      : dictionary of dataframes
         where key=NAME, value=df_${NAME}
@@ -56,11 +57,11 @@ def plot_calibration_data(d_cal, eye_pos=0, tag):
     title = title+" ("+eye_pos+")"
     ax.set_title(title)
 
-    path='../figs/'+tag+'.jpg'
+    path='figs/'+tag+'.jpg'
     plt.savefig(path)
     return path
 
-def compute_quantile(d_cal, eye_pos):
+def compute_quantile(d_cal, eye_pos=0):
     '''
     @Param <d_cal>      : dictionary of dataframes
         where key=NAME, value=df_${NAME}
