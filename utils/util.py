@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt 
 import sys
 import numpy
+import statistics
 
 #NAME=sys.argv[1]
 
@@ -29,7 +30,7 @@ def calibration_data(vid_names):
         d_cal[name] = pd.read_csv('processed/'+str(name)+'.csv')
     return d_cal
         
-def plot_calibration_data(d_cal, tag, eye_pos=0):
+def plot_calibration_data(d_cal, tag, eye_pos="0"):
     '''
     @Param <d_cal>      : dictionary of dataframes
         where key=NAME, value=df_${NAME}
@@ -46,7 +47,6 @@ def plot_calibration_data(d_cal, tag, eye_pos=0):
     ax.set_xlabel('X coordinate')
     ax.set_ylabel('Y coordinate')
     ax.set_zlabel('Z coordinate')
-    ax.legend(loc="upper left")
     
     i=0
     colour=['red','orange','yellow','green','blue']
@@ -54,6 +54,7 @@ def plot_calibration_data(d_cal, tag, eye_pos=0):
     for name in d_cal:
         ax.scatter(d_cal[name]['gaze_'+eye_pos+'_x'], d_cal[name]['gaze_'+eye_pos+'_y'], d_cal[name]['gaze_'+eye_pos+'_z'], color=colour[i], marker=marker[i], label=name)
         i+=1
+    ax.legend(loc="upper left")
     title = title+" ("+eye_pos+")"
     ax.set_title(title)
 
@@ -61,7 +62,7 @@ def plot_calibration_data(d_cal, tag, eye_pos=0):
     plt.savefig(path)
     return path
 
-def compute_quantile(d_cal, eye_pos=0):
+def compute_stats(d_cal, eye_pos="0"):
     '''
     @Param <d_cal>      : dictionary of dataframes
         where key=NAME, value=df_${NAME}
@@ -69,12 +70,27 @@ def compute_quantile(d_cal, eye_pos=0):
         default value 0. Represents location of eye landmark according to
         https://github.com/TadasBaltrusaitis/OpenFace/wiki/Output-Format
     '''
-    d_quant={}
+    d_stats={}
     for name in d_cal:
-        d_quant[name] = d_cal[name][['gaze_'+eye_pos+'_x','gaze_'+eye_pos+'_y','gaze_'+eye_pos+'_z']].quantile([0.01, 0.25, 0.5, 0.75, 0.99])
-    return d_quant
+        d_stats[name] = d_cal[name][['gaze_'+eye_pos+'_x','gaze_'+eye_pos+'_y','gaze_'+eye_pos+'_z']].quantile([0.01, 0.25, 0.5, 0.75, 0.99])
+        d_stats[name].loc['avg'] = [statistics.mean(d_cal[name]['gaze_'+eye_pos+'_x']), statistics.mean(d_cal[name]['gaze_'+eye_pos+'_y']), statistics.mean(d_cal[name]['gaze_'+eye_pos+'_z'])]
+        d_stats[name].loc['stdev'] = [statistics.stdev(d_cal[name]['gaze_'+eye_pos+'_x']), statistics.stdev(d_cal[name]['gaze_'+eye_pos+'_y']), statistics.stdev(d_cal[name]['gaze_'+eye_pos+'_z'])]
+    return d_stats
 
-
-
-
-
+def find_zscore(d_stats, x):
+    '''
+    @Param <d_stats>    : dictionary of dataframes
+        where key=NAME, value=df with quantile/avg/stdev vector
+    @Param <x>          : vector with x,y,z gaze vector coordinate
+    '''
+    conf_x = {}
+    error = {}
+    for name in d_stats:
+        zscore = (x-d_stats[name].loc['avg'])/d_stats[name].loc['stdev']
+        zscore_abs = [abs(z) for z in zscore]
+        SSE=0
+        for z_abs in zscore_abs:
+            SSE += z_abs**2
+        conf_x[name] = zscore_abs
+        error[name] = SSE
+    return conf_x, error
